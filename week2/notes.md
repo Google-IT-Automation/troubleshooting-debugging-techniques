@@ -156,3 +156,63 @@ We should always start by writing clear code that does what it should, and only 
 - Write code that is readable
 - Easy to maintain
 - Easy to understand
+
+**If we have to optimize our code, then we can think based on below lines:**
+- storing data that was already calculated to avoid calculating it again
+- using right data structures
+- reorganizing the code, so that the computer can stay busy while waiting for information from slow sources like (disk or network)
+- **` To know what sources of slowness we need to address, we have to figure out where our code is spending most of its time. There are bunch of tools that can help us with this called ` profilers**
+## Profilers:
+- A tool that measures the resources that our code is using, giving us a better understanding of what's going on.
+- In particular, they help us see how memory is allocated and how the time is spent.
+- Profilers are specific to each programming language.
+    - `gprof` to analyze a c program
+    - `c-Profile` module to analyze a python program
+- Using these tools we can see which functions are called by our program, how many times each function was called and how much time program spent on each of them.
+- To optimize code, we need to restructure it to avoid repeating expensive actions.
+- **Expensive operations include:**
+    - Parsing a file
+    - Reading data over a network
+    - Iterating through a whole list
+    - Creating copies of the structures that we have in memory
+        - If these structures are big, it can be pretty expensive to create those copies. **DO IT ONLY IF UNAVOIDABLE**
+    - **DO NOT PERFORM EXPENSIVE ACTIONS INSIDE LOOP**
+    - What if parsing a file/downloading data is taking a lot of time:
+        - Create local copies/ Create Caches
+        - Cache saves us time and make our programs run faster.
+        - Cache Decisions:
+            - How often we need to update the cache
+            - What to do if the data is stale
+
+### Time command
+- Running a script with time command produces 3 values
+- **Real**:
+    - The amount of actual time that it took to execute the command. This value is sometimes called Wall-clock time.
+- **User**:
+    - The time spent in operations in the user space.
+- **Sys**
+    - The time spent in doing system-level operations.
+
+### Using Profilers
+There are different profilers available for python that works for different use-cases.
+- Here we are going to demo pprofile3
+- -f flag tells which file format to use
+- -o flag tells where to store the output
+- We can open the generated file usinf `kcachegrind` tool
+- Check the graph to see which function is taking most of the time
+- Then navigate to the function, to understand why it is consuming more time
+```python
+$ pprofile3 -f callgrind -o profile.out ./myscript.py
+$ kcachegrind profile.out
+```
+## Conclusion
+- [More About Improving Our Code](https://en.wikipedia.org/wiki/Profiling_(computer_programming))
+
+<br>
+
+# Parallelizing Operations
+-  Reading information from disk or transferring it over the network is a slow operation.
+- In typical scripts while this operation is going on, nothing else happens. The script is blocked, waiting for input or output while the CPU sits idle.
+- **One way we can make this better is to do operations in parallel.**
+    - So that, while the computer is waiting for the slow IO, other work can take place. 
+    - The tricky part is dividing up the tasks so that we get the same result in the end.
