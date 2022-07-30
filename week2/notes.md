@@ -215,4 +215,122 @@ $ kcachegrind profile.out
 - In typical scripts while this operation is going on, nothing else happens. The script is blocked, waiting for input or output while the CPU sits idle.
 - **One way we can make this better is to do operations in parallel.**
     - So that, while the computer is waiting for the slow IO, other work can take place. 
-    - The tricky part is dividing up the tasks so that we get the same result in the end.
+    - The tricky part is dividing up the tasks so that we get the same result in the end. There's actually a whole field of computer science called `concurrency`, dedicated to how we write programs that do operations in parallel. 
+- **Lets understand what OS already does for us:**
+    - If a computer has more than one core, the operating system can decide which processes get executed on which core. Processes running on different cores always execute in parallel.Each of them has its own memory allocation and does its own IO calls. So, **`Easiest way to run operations in parallel is  just to split them across different processes, calling your script many times each with a different input set, and just let the operating system handle the concurrency`**
+    - **Another easy way is to have a good balance of different workloads that you run on your computer.** If you have a process that's using a lot of CPU while a different process is using a lot of network IO and another process is using a lot of disk IO, these can all run in parallel without interfering with each other.
+    - When using the OS to split the work and the processes, these processes *`don't share any memory, and sometimes we might need to have some shared data.`* In that case, we'd use **threads.**
+
+### **Threads:**
+Threads let us run parallel tasks inside a process. This allows threads to share some of the memory with other threads in the same process. Since this isn't handled by the OS, we'll need to modify our code to create and handle the threats.
+- Threading Implementation is language specific.
+- In Python, we can use the Threading or AsyncIO modules to do this.
+- These modules let us specify which parts of the code we want to run in separate threads or as separate asynchronous events, and how we want the results of each to be combined in the end. <br>
+- **NOTE:**
+    - depending on the actual threading implementation for the language you're using, it might happen that all threads get executed in the same CPU processor.  In that case, if you want to use more processors, you'll need to split the code into fully separate processes.
+
+### **Multiprocessing**
+- If your script is mostly just waiting on input or output, also known as I/O bound, it might matter if it's executed on one processor or eight.
+- If your script is CPU bound,  you'll definitely want to split your execution across processors.
+- **NOTE:**
+    - If we're trying to read a bunch of files from disk and do too many operations in parallel, the disk might end up spending more time going from one position to another then actually retrieving the data
+    - If we're doing a ton of operations that use a lot of CPU, the OS could spend more time switching between them than actually making progress in the calculations we're trying to do.
+    - **TIP:** When doing operations in parallel, we need to find the right balance of simultaneous actions that let our computers stay busy without starving our system for resources.
+
+# Slowly growing in complexity
+Let's say you're writing a secret Santa script where each person gives a secret gift to one other randomly assigned person. The script randomly selects pairs of people and then sends an email to the gift-giver telling them who they're buying a present for. 
+
+- If you're doing this for the people working on your floor, `you might just store the list of names and emails in a CSV file`
+    - Company keep hiring more and more people and now parsing CSV is taking a lot of time
+    - This is where you might want to consider a different technology
+- `You could decide to store your data in a SQLite file`. This is a lightweight database system that lets you query the information stored in the file without needing to run a database server.
+    - But imagine that you have keep on adding more and more features to the service.
+        - It now includes a way to create a wish list
+        - a machine learning algorithm that suggests possible gifts
+        - a tracker that keeps a history of each present given.
+    - And since people at your company love the program so much, you've made it an external service available to anybody.
+        - Keeping all the data in one file would be too slow. 
+        - So you'll need to move to a different solution.
+- Use a full fledged database server
+    - And run it on a separate machine than the once running secret santa service.
+    - If the service becomes really really popular, 
+        - you might notice that your database isn't fast enough to serve all the queries
+- `you can add a caching service like memcached` which keeps the most commonly used results in RAM to avoid querying the database unnecessarily.
+
+*`So we've gone from hosting the data in a CSV file to having it in a SQLite file then moving it to a database server and finally using a dynamic casher in front of the database server to make it run even faster.`*
+
+**TIP :** You need to pay attention to how the service is growing to know when you need to take the next step to make it work best for the current use case.
+
+# Dealing with Complex Slow Systems:
+What to do if your complex system is slow ?
+- You want to find the bottleneck that is causing your system to under perform
+    - Is it the generation of **dynamic pages** on the webserver
+    - Is it the queries to the **database**
+    - Is it due to calculations going on in **fulfillment process**
+- one key thing is to have a **good monitoring infrastructure** that lets you know where the system is spending the most time.
+
+Suppose, you notice that website is loading slowly. 
+- When you check the web server, you noticed that it is not overloaded.
+- Most of the time is spent waiting on network calls
+- When looking at your database server
+    - you find that it's spending a lot of time on Disk I/O
+    - This shows that there's a problem with how the data is being accessed in the database
+- Now, check if the indexing is happening properly ?
+    - When a database server needs to find data, it can do it much faster if there's an index on the field that you're querying for.
+    - On the flip side, if the database has too many indexes, adding or modifying entries can become really slow because all of the indexes need updating.
+    - **We need to look for a good balance of having indexes for the fields that are actually going to be used.**
+- If the problem is not solved by indexing and there are too many queries for the server to reply to all of them on time ?
+    - You might need to look into either caching the queries or distributing the data to separate database servers.
+- Suppose, service is slow, you see that the CPU on the web serving machine is saturated
+    - The first step is to check if the code of the service can be improved
+    - If it's a dynamic website, we might try adding caching on top of it.
+    - But if the code is fine and cache does not help because the problem is that there are just too many requests coming in for 1 machine to answer them all
+
+- Too many requests for a single machine
+    - Distribute the load across more computers
+        - You might need to reorganize the code so that it's capable of running in distributed system instead of single computer.
+        - This might take some work, but once you have done it, you can easily scale your application to as many requests as needed.
+# Using Threads to improve the run time
+### Problem Statement:
+We need to create thumbnail images from the full-size images. But total number of images is very-very huge in count. Write a script to convert the images ?
+
+**Approach:**
+- Try to come-up with a naive script which get the work done
+- Try to measure the efficiency of naive script
+    - Take some small sample of images from total images and run your script against the test sample. Measure the time taken using the `time` command.
+- **Lets try to make the script faster by processing images in parallel.**
+```python
+### Thread based model
+from concurrent import futures
+
+def process_file(root, basename):
+    pass
+
+if __name__ == "__main__":
+    executor = futures.ThreadPoolExecutor()
+    executor.submit(process_file, root, basename)
+    print("waiting for all threads to finish")
+    executor.shutdown()
+```
+```python
+### Process based model
+from concurrent import futures
+
+def process_file(root, basename):
+    pass
+
+if __name__ == "__main__":
+    executor = futures.ProcessPoolExecutor()
+    executor.submit(process_file, root, basename)
+    print("waiting for all threads to finish")
+    executor.shutdown()
+```
+- First we need to create an **Executor**
+    - The process that's in charge of distributing teh work among the different workers.
+- **Futures Module**
+    - Provides a couple of different executors, one for using threads and another for using processes
+
+## More About Complex Slow Systems
+- https://realpython.com/python-concurrency/
+- https://hackernoon.com/threaded-asynchronous-magic-and-how-to-wield-it-bba9ed602c32
+
